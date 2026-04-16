@@ -1,7 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { AI_PROMPT, SelectBudgetOptions, SelectTravelsList } from '@/constants/options';
-import { chatSession } from '@/service/AIModel';
+import { model, generationConfig, AI_PROMPT_HISTORY } from '@/service/AIModel';
+import { generateFallbackPlan } from '@/service/FallbackPlanner';
 import React, { useEffect, useState } from 'react'
 import GooglePlacesAutocomplete from 'react-google-places-autocomplete'
 import { toast } from 'sonner';
@@ -60,24 +61,61 @@ function CreateTrip() {
       return;
     }
 
-    if(formData?.noOfDays>5&&!formData?.location||!formData?.budget||!formData?.traveler||!formData?.sourceLocation)
-    {
+    if (!formData?.location || !formData?.budget || !formData?.traveler || !formData?.sourceLocation || !formData?.noOfDays) {
       toast("Please fill all details including your source location")
       return;
     }
+
+    if (formData?.noOfDays > 10) {
+      toast("We currently support trips up to 10 days only")
+      return;
+    }
+
     setLoading(true);
     const FINAL_PROMPT=AI_PROMPT
     .replace('{location}',formData?.location?.label)
-    .replace('{totalDays}',formData?.noOfDays)
     .replace('{traveler}',formData?.traveler)
     .replace('{budget}',formData?.budget)
-    .replace('{totalDays}',formData?.noOfDays)
-    
-    const result=await chatSession.sendMessage(FINAL_PROMPT)
+    .replaceAll('{totalDays}',formData?.noOfDays)
 
-    console.log("--", result?.response?.text());
-    setLoading(false);
-    SaveAiTrip(result?.response?.text())
+    // ── Step 1: Try Gemini (one silent attempt, no retries) ──────────────────
+    let geminiSucceeded = false;
+    try {
+      const chatSession = model.startChat({
+        generationConfig,
+        history: AI_PROMPT_HISTORY,
+      });
+      const result = await chatSession.sendMessage(FINAL_PROMPT);
+      const tripText = result?.response?.text();
+      if (tripText) {
+        console.log("-- Gemini succeeded:", tripText);
+        geminiSucceeded = true;
+        await SaveAiTrip(tripText);
+        return;
+      }
+    } catch (error) {
+      // Silently swallow the Gemini error — fallback will handle it
+      console.warn("Gemini unavailable, switching to rule-based planner:", error?.message);
+    }
+
+    // ── Step 2: Rule-Based Fallback ──────────────────────────────────────────
+    if (!geminiSucceeded) {
+      try {
+        toast('Generating your itinerary...');
+        const fallbackTrip = await generateFallbackPlan({
+          location: formData?.location?.label,
+          noOfDays: formData?.noOfDays,
+          budget: formData?.budget,
+          traveler: formData?.traveler,
+        });
+        console.log("-- Fallback Trip Data:", fallbackTrip);
+        await SaveAiTrip(fallbackTrip);
+      } catch (fallbackError) {
+        console.error("Fallback planner also failed:", fallbackError);
+        toast.error("Could not generate a trip plan. Please check your internet connection and try again.");
+        setLoading(false);
+      }
+    }
   }
 
   const SaveAiTrip=async(TripData)=>{
@@ -292,17 +330,33 @@ function CreateTrip() {
             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5'>
               {SelectTravelsList.map((item,index)=>(
                 <div key={index} 
-                  onClick={()=>handleInputChange('traveler', item.people)}
+                  onClick={()=>{
+                    if(item.title !== 'Family') {
+                      handleInputChange('traveler', item.people)
+                    }
+                  }}
                   className='p-6 border-2 cursor-pointer rounded-xl hover:shadow-lg transition-all duration-300'
                   style={{
-                    borderColor: formData?.traveler==item.people ? colors.terracotta : '#E5E7EB',
-                    backgroundColor: formData?.traveler==item.people ? `${colors.terracotta}10` : 'white',
-                    transform: formData?.traveler==item.people ? 'scale(1.02)' : 'scale(1)'
+                    borderColor: (formData?.traveler==item.people || (item.title == 'Family' && formData?.traveler?.includes('Family'))) ? colors.terracotta : '#E5E7EB',
+                    backgroundColor: (formData?.traveler==item.people || (item.title == 'Family' && formData?.traveler?.includes('Family'))) ? `${colors.terracotta}10` : 'white',
+                    transform: (formData?.traveler==item.people || (item.title == 'Family' && formData?.traveler?.includes('Family'))) ? 'scale(1.02)' : 'scale(1)'
                   }}
                 > 
                   <h2 className='text-4xl mb-3'>{item.icon}</h2>
                   <h2 className='font-bold text-base mb-2' style={{ color: colors.darkGray }}>{item.title}</h2>
-                  <h2 className='text-sm text-gray-600'>{item.desc}</h2>
+                  {item.title === 'Family' ? (
+                    <div onClick={(e)=>e.stopPropagation()}>
+                      <Input 
+                        type="number" 
+                        placeholder="Members"
+                        min="1"
+                        onChange={(e)=>handleInputChange('traveler', `Family of ${e.target.value} People`)}
+                        className="mt-2 h-10 border-gray-300 focus:border-orange-400"
+                      />
+                    </div>
+                  ) : (
+                    <h2 className='text-sm text-gray-600'>{item.desc}</h2>
+                  )}
                 </div>
               ))}
             </div>
