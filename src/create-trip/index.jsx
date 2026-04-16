@@ -32,6 +32,7 @@ const colors = {
 
 function CreateTrip() {
   const [place, setPlace]=useState();
+  const [sourcePlace, setSourcePlace]=useState();
   const [formData, setFormData]=useState([]);
   const [openDialog, setOpenDialog]=useState(false);
 
@@ -59,9 +60,9 @@ function CreateTrip() {
       return;
     }
 
-    if(formData?.noOfDays>5&&!formData?.location||!formData?.budget||!formData?.traveler)
+    if(formData?.noOfDays>5&&!formData?.location||!formData?.budget||!formData?.traveler||!formData?.sourceLocation)
     {
-      toast("Please fill all details")
+      toast("Please fill all details including your source location")
       return;
     }
     setLoading(true);
@@ -165,6 +166,37 @@ function CreateTrip() {
         {/* Form Sections */}
         <div className='flex flex-col gap-8'>
           
+          {/* Source Location Section */}
+          <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${colors.terracotta}20` }}>
+                <FaMapMarkerAlt className="text-xl" style={{ color: colors.terracotta }} />
+              </div>
+              <h2 className='text-xl md:text-2xl font-semibold' style={{ color: colors.darkGray }}>
+                What is your current location? (Source)
+              </h2>
+            </div>
+            <GooglePlacesAutocomplete
+              apiKey={import.meta.env.VITE_GOOGLE_PLACE_API_KEY}
+              selectProps={{
+                place: sourcePlace,
+                onChange:(v)=>{setSourcePlace(v); handleInputChange('sourceLocation', v)},
+                styles: {
+                  control: (provided) => ({
+                    ...provided,
+                    padding: '6px',
+                    borderRadius: '12px',
+                    borderColor: formData?.sourceLocation ? colors.terracotta : '#D1D5DB',
+                    borderWidth: '2px',
+                    '&:hover': {
+                      borderColor: colors.terracotta
+                    }
+                  })
+                }
+              }}
+            />
+          </div>
+
           {/* Destination Section */}
           <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
             <div className="flex items-center gap-3 mb-5">

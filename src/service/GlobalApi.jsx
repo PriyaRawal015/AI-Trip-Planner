@@ -9,7 +9,9 @@ const config={
          'X-Goog-FieldMask': [
             'places.photos',
             'places.displayName',
-            'places.id'
+            'places.id',
+            'places.formattedAddress',
+            'places.rating'
          ]
     }
 }

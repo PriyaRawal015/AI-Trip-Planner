@@ -7,6 +7,8 @@ import { db } from '@/service/firebaseConfig';
 import Hotels from './components/Hotels';
 import PlacesToVisit from './components/PlacesToVisit';
 import Footer from './components/Footer';
+import RelatedTrips from './components/RelatedTrips';
+import TransportOptions from './components/TransportOptions';
 
 function Viewtrip() {
     const {tripId}=useParams();
@@ -38,8 +40,14 @@ function Viewtrip() {
         {/* Recommended Hotels */}
         <Hotels trip={trip}/>
 
+        {/* Travel Options */}
+        <TransportOptions trip={trip}/>
+
         {/* Daily Plan  */}
         <PlacesToVisit trip={trip}/>
+
+        {/* Related trips ML section  */}
+        <RelatedTrips trip={trip}/>
 
         {/* Footer  */}
         <Footer trip={trip}/>

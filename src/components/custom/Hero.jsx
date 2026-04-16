@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaMapMarkedAlt, FaWallet, FaClock, FaUserCheck, FaCompass, FaHeart, FaStar } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
-
+import { getRecommendations } from '../../service/RecommenderApi';
 // Note: In your actual React Router setup, replace this with:
 // import { useNavigate } from 'react-router-dom';
 // const navigate = useNavigate();
@@ -17,6 +17,9 @@ const colors = {
 
 function Hero() {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [recommendations, setRecommendations] = useState([]);
+  const [selectedStyle, setSelectedStyle] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Handle navigation to create trip page
   const handleGetStarted = () => {
@@ -48,12 +51,34 @@ function Hero() {
     }
   ];
 
-  const travelStyles = [
-    { title: "Off the Beaten Path", image: "🏔️", desc: "Explore hidden gems away from tourist crowds" },
-    { title: "Outdoor Adventure", image: "⛰️", desc: "Thrilling activities in nature's playground" },
-    { title: "Cultural & Culinary", image: "🍝", desc: "Immerse in local traditions and flavors" },
-    { title: "Relaxation & Wellness", image: "🧘", desc: "Rejuvenate your mind and body" }
-  ];
+  const [travelStyles, setTravelStyles] = useState([]);
+
+  useEffect(() => {
+    const allTravelStyles = [
+      { title: "Off the Beaten Path", image: "🏔️", desc: "Explore hidden gems away from tourist crowds", category: "mountain nature adventure" },
+      { title: "Beach Relaxation", image: "🏖️", desc: "Sunny beaches and pristine waters", category: "beach relaxation" },
+      { title: "City & Culture", image: "🏙️", desc: "Bustling streets, art, and vibrant city life", category: "city culture entertainment" },
+      { title: "Luxury Romance", image: "🍷", desc: "Premium experiences for couples", category: "luxury romantic" },
+      { title: "Historical Wonders", image: "🏛️", desc: "Step back in time through ancient ruins", category: "history culture" },
+      { title: "Foodie Paradise", image: "🍜", desc: "Taste authentic local cuisines and culinary delights", category: "food culinary" },
+      { title: "Family Fun", image: "👪", desc: "Kid-friendly activities and family moments", category: "family friendly amusement" },
+      { title: "Wildlife Safari", image: "🦁", desc: "Get close to nature's most magnificent creatures", category: "wildlife nature safari" },
+      { title: "Wellness Retreat", image: "🧘", desc: "Rejuvenate your body and mind in tranquil settings", category: "wellness spa relaxation" },
+      { title: "Winter Sports", image: "⛷️", desc: "Hit the slopes for skiing and snowboarding", category: "winter sports snow" }
+    ];
+    
+    // Shuffle and pick 4
+    const shuffled = [...allTravelStyles].sort(() => 0.5 - Math.random());
+    setTravelStyles(shuffled.slice(0, 4));
+  }, []);
+
+  const fetchRecommendations = async (style) => {
+    setIsLoading(true);
+    setSelectedStyle(style.title);
+    const recs = await getRecommendations(style.category, 3);
+    setRecommendations(recs);
+    setIsLoading(false);
+  };
 
   return (
     <div className="bg-gradient-to-b from-white to-gray-50">
@@ -110,7 +135,8 @@ function Hero() {
           {travelStyles.map((style, idx) => (
             <div 
               key={idx}
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer"
+              onClick={() => fetchRecommendations(style)}
+              className={`bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer border-2 ${selectedStyle === style.title ? 'border-terracotta' : 'border-transparent'}`}
             >
               <div className="text-5xl mb-4 text-center">{style.image}</div>
               <h3 className="font-bold text-xl mb-3 text-center" style={{ color: colors.darkGray }}>
@@ -120,6 +146,44 @@ function Hero() {
             </div>
           ))}
         </div>
+
+        {/* AI Recommendations Display */}
+        {(isLoading || recommendations.length > 0) && (
+          <div className="mt-16 bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
+            <h3 className="text-2xl font-bold mb-6 text-center" style={{ color: colors.terracotta }}>
+              AI Recommendations for {selectedStyle}
+            </h3>
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-terracotta"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {recommendations.map((rec) => (
+                  <div key={rec.id} className="rounded-xl overflow-hidden shadow-lg flex flex-col transition-transform hover:scale-[1.02]">
+                    <div className="h-48 overflow-hidden relative">
+                      <img src={rec.image_url} alt={rec.name} className="w-full h-full object-cover" />
+                      <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded-full text-sm font-bold shadow flex items-center gap-1">
+                        <FaStar className="text-yellow-400" /> {rec.rating}
+                      </div>
+                    </div>
+                    <div className="p-5 flex-1 flex flex-col bg-gray-50">
+                      <h4 className="font-bold text-lg mb-1">{rec.name}</h4>
+                      <p className="text-sm text-gray-500 mb-3">{rec.location}</p>
+                      <p className="text-sm text-gray-700 flex-1">{rec.description}</p>
+                      <Link to="/create-trip" className="mt-4">
+                        <button className="w-full py-2 rounded-lg text-white font-medium transition-colors hover:bg-opacity-90" style={{ backgroundColor: colors.terracotta }}>
+                          Plan Trip Here
+                        </button>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* How It Works Section */}
