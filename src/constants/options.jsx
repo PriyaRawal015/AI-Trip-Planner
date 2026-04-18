@@ -26,19 +26,19 @@ export const SelectBudgetOptions=[
     {
         id:1,
         title:'Cheap',
-        desc:'Stay conscious of costs',
+        desc:'Stay conscious of costs (₹1000 – ₹3000 per night)',
         icon:'💵', 
     },
     {
         id:2,
         title:'Moderate',
-        desc:'Kep coat on the average side',
+        desc:'Keep cost on the average side (₹3000 – ₹7000 per night)',
         icon:'💰', 
     },
     {
         id:3,
         title:'Luxury',
-        desc:'Dont worry about cost',
+        desc:'Don’t worry about cost (₹7000+ per night)',
         icon:'💸', 
     },
 ]

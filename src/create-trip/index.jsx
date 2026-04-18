@@ -52,6 +52,22 @@ function CreateTrip() {
     console.log(formData)
   },[formData])
 
+  useEffect(() => {
+    if (formData?.startDate && formData?.endDate) {
+      const start = new Date(formData.startDate);
+      const end = new Date(formData.endDate);
+      const diffTime = end - start;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      
+      if (diffDays > 0 && formData?.noOfDays !== diffDays.toString()) {
+        setFormData(prev => ({
+          ...prev,
+          noOfDays: diffDays.toString()
+        }));
+      }
+    }
+  }, [formData?.startDate, formData?.endDate]);
+
   const OnGenerateTrip=async()=>{
 
     const user=localStorage.getItem('user');
@@ -61,8 +77,15 @@ function CreateTrip() {
       return;
     }
 
-    if (!formData?.location || !formData?.budget || !formData?.traveler || !formData?.sourceLocation || !formData?.noOfDays) {
-      toast("Please fill all details including your source location")
+    if (!formData?.location || !formData?.budget || !formData?.traveler || !formData?.sourceLocation || !formData?.startDate || !formData?.endDate) {
+      toast("Please fill all details including your travel dates")
+      return;
+    }
+
+    const start = new Date(formData.startDate);
+    const end = new Date(formData.endDate);
+    if (end < start) {
+      toast("End date cannot be before start date");
       return;
     }
 
@@ -266,27 +289,7 @@ function CreateTrip() {
             />
           </div>
 
-          {/* Days Section */}
-          <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${colors.terracotta}20` }}>
-                <FaCalendarAlt className="text-xl" style={{ color: colors.terracotta }} />
-              </div>
-              <h2 className='text-xl md:text-2xl font-semibold' style={{ color: colors.darkGray }}>
-                How many days are you planning?
-              </h2>
-            </div>
-            <Input 
-              placeholder={'Ex. 3'} 
-              type="number"
-              onChange={(e)=>handleInputChange('noOfDays', e.target.value)}
-              className="text-lg p-6 rounded-xl"
-              style={{
-                borderColor: formData?.noOfDays ? colors.terracotta : '#D1D5DB',
-                borderWidth: '2px'
-              }}
-            />
-          </div>
+
 
           {/* Budget Section */}
           <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
@@ -311,10 +314,55 @@ function CreateTrip() {
                 > 
                   <h2 className='text-4xl mb-3'>{item.icon}</h2>
                   <h2 className='font-bold text-lg mb-2' style={{ color: colors.darkGray }}>{item.title}</h2>
-                  <h2 className='text-sm text-gray-600'>{item.desc}</h2>
+                  <h2 className='text-sm text-gray-600 font-medium'>{item.desc}</h2>
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Travel Dates Section */}
+          <div className="bg-white rounded-2xl shadow-md p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${colors.terracotta}20` }}>
+                <FaCalendarAlt className="text-xl" style={{ color: colors.terracotta }} />
+              </div>
+              <h2 className='text-xl md:text-2xl font-semibold' style={{ color: colors.darkGray }}>
+                When are you planning to travel?
+              </h2>
+            </div>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mt-5'>
+              <div className='flex flex-col gap-2'>
+                <label className='text-sm font-semibold' style={{ color: colors.darkGray }}>📅 Start Date</label>
+                <Input 
+                  type="date"
+                  onChange={(e)=>handleInputChange('startDate', e.target.value)}
+                  className="text-lg p-6 rounded-xl"
+                  style={{
+                    borderColor: formData?.startDate ? colors.terracotta : '#D1D5DB',
+                    borderWidth: '2px'
+                  }}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+              <div className='flex flex-col gap-2'>
+                <label className='text-sm font-semibold' style={{ color: colors.darkGray }}>📅 End Date</label>
+                <Input 
+                  type="date"
+                  onChange={(e)=>handleInputChange('endDate', e.target.value)}
+                  className="text-lg p-6 rounded-xl"
+                  style={{
+                    borderColor: formData?.endDate ? colors.terracotta : '#D1D5DB',
+                    borderWidth: '2px'
+                  }}
+                  min={formData?.startDate || new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            </div>
+            {formData?.noOfDays > 0 && (
+              <p className='mt-4 text-sm font-medium' style={{ color: colors.terracotta }}>
+                Total Duration: <strong>{formData.noOfDays} Days</strong>
+              </p>
+            )}
           </div>
           
           {/* Travelers Section */}
@@ -389,7 +437,7 @@ function CreateTrip() {
       </div>
 
       {/* Sign In Dialog */}
-      <Dialog open={openDialog}>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogDescription>

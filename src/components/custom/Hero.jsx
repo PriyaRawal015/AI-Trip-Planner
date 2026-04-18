@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { FaMapMarkedAlt, FaWallet, FaClock, FaUserCheck, FaCompass, FaHeart, FaStar } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { getRecommendations } from '../../service/RecommenderApi';
-// Note: In your actual React Router setup, replace this with:
-// import { useNavigate } from 'react-router-dom';
-// const navigate = useNavigate();
-// onClick={() => navigate('/create-trip')}
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+} from "@/components/ui/dialog"
+import { Button } from '../ui/button';
+import { FcGoogle } from "react-icons/fc";
+import { useGoogleLogin } from '@react-oauth/google';
+import axios from 'axios';
 
 // Color palette from the image
 const colors = {
@@ -21,13 +27,44 @@ function Hero() {
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [openDialog, setOpenDialog] = useState(false);
+  const navigate = useNavigate();
+
   // Handle navigation to create trip page
   const handleGetStarted = () => {
-    // For demo purposes, showing an alert
-    // In your actual app, use: navigate('/create-trip')
-    alert('Navigating to Create Trip page...');
-    console.log('Navigate to /create-trip');
-    // window.location.href = '/create-trip'; // Alternative if not using React Router
+    const user = localStorage.getItem('user');
+    if (!user) {
+      setOpenDialog(true);
+      return;
+    }
+    navigate('/create-trip');
+  };
+
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      console.log("Login successful:", tokenResponse);
+      GetUserProfile(tokenResponse);
+    },
+    onError: (error) => console.error("Login failed:", error),
+  });
+
+  const GetUserProfile = (tokenInfo) => {
+    axios
+      .get(`https://www.googleapis.com/oauth2/v1/userinfo?access_token=${tokenInfo?.access_token}`, {
+        headers: {
+          Authorization: `Bearer ${tokenInfo?.access_token}`,
+          Accept: 'application/json',
+        },
+      })
+      .then((response) => {
+        console.log("User profile:", response.data);
+        localStorage.setItem('user', JSON.stringify(response.data));
+        setOpenDialog(false);
+        navigate('/create-trip');
+      })
+      .catch((error) => {
+        console.error("Failed to fetch user profile:", error);
+      });
   };
 
   const testimonials = [
@@ -93,15 +130,13 @@ function Hero() {
           Your Personal trip planner and travel curator, creating custom itineraries tailored to your interests and budget.
         </p>
 
-<Link to="/create-trip">
-
         <button 
+          onClick={handleGetStarted}
           className="px-8 py-4 text-base md:text-lg font-semibold text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           style={{ backgroundColor: colors.terracotta }}
         >
           Get Started, It's Free
         </button>
-</Link>
 
         {/* Feature Highlights */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mt-20 w-full">
@@ -277,17 +312,54 @@ function Hero() {
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             Join thousands of travelers who've discovered smarter, more personalized ways to explore the world
           </p>
-          <Link to="/create-trip">
-
           <button 
+            onClick={handleGetStarted}
             className="px-10 py-5 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
             style={{ backgroundColor: colors.terracotta, color: 'white' }}
           >
             Start Planning Now
           </button>
-          </Link>
         </div>
       </div>
+
+      {/* Login Dialog */}
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogDescription>
+              <div className="text-center">
+                <div className="mb-6">
+                  <div 
+                    className="w-16 h-16 rounded-full mx-auto flex items-center justify-center text-white text-2xl font-bold"
+                    style={{ backgroundColor: colors.terracotta }}
+                  >
+                    ✈️
+                  </div>
+                </div>
+                <h2 className='font-bold text-2xl mb-3' style={{ color: colors.darkGray }}>
+                  Sign In with Google
+                </h2>
+                <p className='text-gray-600 mb-6'>
+                  Sign in to the app with Google authentication securely to start planning your trip
+                </p>
+
+                <Button 
+                  onClick={login} 
+                  className="w-full py-6 text-base font-semibold rounded-xl flex gap-3 items-center justify-center hover:shadow-lg transition-all"
+                  style={{
+                    backgroundColor: 'white',
+                    color: colors.darkGray,
+                    border: `2px solid ${colors.terracotta}`
+                  }}
+                > 
+                  <FcGoogle className='h-7 w-7'/> 
+                  Sign In With Google 
+                </Button>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
