@@ -21,7 +21,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '@/service/firebaseConfig';
 
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FaMapMarkerAlt, FaCalendarAlt, FaWallet, FaUsers } from 'react-icons/fa';
 
 // Color palette
@@ -34,12 +34,22 @@ const colors = {
 function CreateTrip() {
   const [place, setPlace]=useState();
   const [sourcePlace, setSourcePlace]=useState();
-  const [formData, setFormData]=useState([]);
+  const [formData, setFormData]=useState({});
   const [openDialog, setOpenDialog]=useState(false);
 
   const [loading, setLoading]=useState(false);
 
   const navigate=useNavigate();
+  const location=useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const destination = params.get('destination');
+    if (destination) {
+      setPlace({ label: destination });
+      handleInputChange('location', { label: destination });
+    }
+  }, [location]);
 
   const handleInputChange=(name,value)=>{
     setFormData({
@@ -240,7 +250,7 @@ function CreateTrip() {
             <GooglePlacesAutocomplete
               apiKey={import.meta.env.VITE_GOOGLE_PLACE_API_KEY}
               selectProps={{
-                place: sourcePlace,
+                value: sourcePlace,
                 onChange:(v)=>{setSourcePlace(v); handleInputChange('sourceLocation', v)},
                 styles: {
                   control: (provided) => ({
@@ -271,7 +281,7 @@ function CreateTrip() {
             <GooglePlacesAutocomplete
               apiKey={import.meta.env.VITE_GOOGLE_PLACE_API_KEY}
               selectProps={{
-                place,
+                value: place,
                 onChange:(v)=>{setPlace(v); handleInputChange('location', v)},
                 styles: {
                   control: (provided) => ({

@@ -207,7 +207,7 @@ function Hero() {
                       <h4 className="font-bold text-lg mb-1">{rec.name}</h4>
                       <p className="text-sm text-gray-500 mb-3">{rec.location}</p>
                       <p className="text-sm text-gray-700 flex-1">{rec.description}</p>
-                      <Link to="/create-trip" className="mt-4">
+                      <Link to={'/create-trip?destination=' + encodeURIComponent(rec.name + ', ' + rec.location)} className="mt-4">
                         <button className="w-full py-2 rounded-lg text-white font-medium transition-colors hover:bg-opacity-90" style={{ backgroundColor: colors.terracotta }}>
                           Plan Trip Here
                         </button>
